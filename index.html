@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>cURL Runner & SSO Tester</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(22, 30, 49, 0.75);
+      --border: rgba(255, 255, 255, 0.12);
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --accent: #818cf8;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --success: #4ade80;
+      --danger: #f87171;
+      --code-bg: #030712;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at 10% 15%, #1e1b4b 0%, var(--bg) 60%, #020617 100%);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1.25rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    header {
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .brand-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--primary);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 9999px;
+      padding: 4px 12px;
+      font-size: 0.8rem;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 6px var(--success);
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+    }
+
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+      line-height: 1.4;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: #cbd5e1;
+    }
+
+    textarea, input[type="text"] {
+      width: 100%;
+      background: var(--code-bg);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      color: #f1f5f9;
+      padding: 0.85rem 1rem;
+      font-size: 0.9rem;
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    textarea:focus, input[type="text"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 0.75rem 1.5rem;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease-in-out;
+    }
+
+    button.primary {
+      background: var(--primary);
+      color: #090d16;
+    }
+
+    button.primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    button.secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    button.secondary:hover {
+      background: rgba(255, 255, 255, 0.16);
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .parsed-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1rem;
+      background: rgba(15, 23, 42, 0.5);
+      padding: 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+
+    .parsed-item span:first-child {
+      color: var(--muted);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .parsed-item span:last-child {
+      font-family: monospace;
+      color: var(--primary);
+      word-break: break-all;
+    }
+
+    .response-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: monospace;
+      display: inline-block;
+    }
+
+    .status-success {
+      background: rgba(74, 222, 128, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(74, 222, 128, 0.3);
+    }
+
+    .status-error {
+      background: rgba(248, 113, 113, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+    }
+
+    .tab-bar {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1rem;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    pre.code-view {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      color: #e2e8f0;
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+      max-height: 420px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .cors-warning {
+      margin-top: 0.75rem;
+      font-size: 0.825rem;
+      color: #fbbf24;
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.25);
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <div class="brand-title">
+          <span>🚀</span> cURL Request Runner
+        </div>
+        <p class="hint" style="margin-bottom:0; margin-top: 4px;">Paste raw cURL commands or fill inputs manually to execute requests & inspect responses.</p>
+      </div>
+      <div class="badge">
+        <span class="status-dot"></span> Ready
+      </div>
+    </header>
+
+    <!-- Request Builder Card -->
+    <div class="card">
+      <div class="section-title">
+        <span>Request Configuration</span>
+        <button class="secondary" id="sampleCurlBtn" style="padding: 4px 10px; font-size: 0.8rem; min-width: auto;">Load Sample cURL</button>
+      </div>
+
+      <div class="form-group">
+        <label for="curlInput">1. Raw cURL Command (Auto-populates fields below)</label>
+        <textarea id="curlInput" placeholder="curl -X POST https://httpbin.org/post -H 'Content-Type: application/json' -d '{&quot;test&quot;: &quot;value&quot;}'"></textarea>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 140px 1fr; gap: 0.75rem;" class="form-group">
+        <div>
+          <label for="methodInput">Method</label>
+          <input type="text" id="methodInput" value="GET" placeholder="GET">
+        </div>
+        <div>
+          <label for="urlInput">Target URL</label>
+          <input type="text" id="urlInput" placeholder="https://httpbin.org/get">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="headersInput">2. Headers (One per line: <code>Key: Value</code> or JSON)</label>
+        <textarea id="headersInput" style="min-height: 80px;" placeholder="Content-Type: application/json&#10;Authorization: Bearer YOUR_TOKEN"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="bodyInput">3. Request Body (Raw text / JSON / Form data)</label>
+        <textarea id="bodyInput" style="min-height: 90px;" placeholder='{"key": "value"}'></textarea>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="sendBtn">
+          <span>▶ Execute Request</span>
+        </button>
+        <button class="secondary" id="clearBtn">Clear All</button>
+      </div>
+
+      <div class="cors-warning">
+        ⚠️ <strong>Browser Note:</strong> Requests run directly inside your browser. If target endpoints reject direct client-side calls due to CORS, consider enabling CORS on the target server or testing endpoints with permissive CORS (e.g. <code>https://httpbin.org</code>).
+      </div>
+    </div>
+
+    <!-- Response Card -->
+    <div class="card">
+      <div class="response-header">
+        <span class="section-title" style="margin-bottom: 0;">Response</span>
+        <div id="statusBadge" class="status-badge" style="display: none;"></div>
+      </div>
+
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tabBodyBtn">Response Body</button>
+        <button class="tab-btn" id="tabHeadersBtn">Response Headers</button>
+      </div>
+
+      <pre class="code-view" id="responseDisplay">No request executed yet. Paste a cURL command or enter URL above and click "Execute Request".</pre>
+    </div>
+  </div>
+
+  <script>
+    const curlInput = document.getElementById('curlInput');
+    const methodInput = document.getElementById('methodInput');
+    const urlInput = document.getElementById('urlInput');
+    const headersInput = document.getElementById('headersInput');
+    const bodyInput = document.getElementById('bodyInput');
+
+    const sendBtn = document.getElementById('sendBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const sampleCurlBtn = document.getElementById('sampleCurlBtn');
+
+    const responseDisplay = document.getElementById('responseDisplay');
+    const statusBadge = document.getElementById('statusBadge');
+    const tabBodyBtn = document.getElementById('tabBodyBtn');
+    const tabHeadersBtn = document.getElementById('tabHeadersBtn');
+
+    let currentResponseData = {
+      body: '',
+      headers: ''
+    };
+    let activeTab = 'body';
+
+    // cURL Parser
+    function parseCurl(curlText) {
+      if (!curlText || !curlText.trim()) return null;
+
+      let clean = curlText.trim()
+        .replace(/\\\r?\n/g, ' ')
+        .replace(/\^/g, ''); // handle powershell/cmd line continuations
+
+      const tokens = [];
+      const regex = /[^\s"']+|"([^"]*)"|'([^']*)'/g;
+      let match;
+      while ((match = regex.exec(clean)) !== null) {
+        tokens.push(match[1] !== undefined ? match[1] : (match[2] !== undefined ? match[2] : match[0]));
+      }
+
+      let method = 'GET';
+      let url = '';
+      const headers = [];
+      let body = '';
+
+      for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i];
+        if (token === '-X' || token === '--request') {
+          method = (tokens[++i] || 'GET').toUpperCase();
+        } else if (token === '-H' || token === '--header') {
+          if (tokens[i + 1]) headers.push(tokens[++i]);
+        } else if (token === '-d' || token === '--data' || token === '--data-raw' || token === '--data-binary') {
+          body = tokens[++i] || '';
+          if (method === 'GET') method = 'POST';
+        } else if (token.startsWith('http://') || token.startsWith('https://')) {
+          url = token;
+        }
+      }
+
+      // Fallback: search for url token if not caught
+      if (!url) {
+        const foundUrl = tokens.find(t => t.startsWith('http://') || t.startsWith('https://'));
+        if (foundUrl) url = foundUrl;
+      }
+
+      return { method, url, headers, body };
+    }
+
+    // Auto-parse on cURL input change
+    curlInput.addEventListener('input', () => {
+      const parsed = parseCurl(curlInput.value);
+      if (parsed) {
+        if (parsed.url) urlInput.value = parsed.url;
+        if (parsed.method) methodInput.value = parsed.method;
+        if (parsed.headers.length > 0) headersInput.value = parsed.headers.join('\n');
+        if (parsed.body) bodyInput.value = parsed.body;
+      }
+    });
+
+    // Sample cURL
+    sampleCurlBtn.addEventListener('click', () => {
+      const sample = `curl -X POST https://httpbin.org/post \\
+  -H "Content-Type: application/json" \\
+  -H "Accept: application/json" \\
+  -d '{"message": "Hello from SSO test suite!", "timestamp": "${new Date().toISOString()}"}'`;
+      curlInput.value = sample;
+      curlInput.dispatchEvent(new Event('input'));
+    });
+
+    // Tab switcher
+    tabBodyBtn.addEventListener('click', () => {
+      activeTab = 'body';
+      tabBodyBtn.classList.add('active');
+      tabHeadersBtn.classList.remove('active');
+      renderResponse();
+    });
+
+    tabHeadersBtn.addEventListener('click', () => {
+      activeTab = 'headers';
+      tabHeadersBtn.classList.add('active');
+      tabBodyBtn.classList.remove('active');
+      renderResponse();
+    });
+
+    function renderResponse() {
+      if (activeTab === 'body') {
+        responseDisplay.textContent = currentResponseData.body || 'No body received.';
+      } else {
+        responseDisplay.textContent = currentResponseData.headers || 'No headers captured.';
+      }
+    }
+
+    // Parse Headers from input textarea
+    function getParsedHeaders(headerString) {
+      const headers = {};
+      if (!headerString.trim()) return headers;
+
+      const lines = headerString.split('\n');
+      for (const line of lines) {
+        const idx = line.indexOf(':');
+        if (idx > -1) {
+          const key = line.slice(0, idx).trim();
+          const val = line.slice(idx + 1).trim();
+          if (key) headers[key] = val;
+        }
+      }
+      return headers;
+    }
+
+    // Clear Button
+    clearBtn.addEventListener('click', () => {
+      curlInput.value = '';
+      urlInput.value = '';
+      methodInput.value = 'GET';
+      headersInput.value = '';
+      bodyInput.value = '';
+      statusBadge.style.display = 'none';
+      currentResponseData = { body: '', headers: '' };
+      responseDisplay.textContent = 'Inputs cleared.';
+    });
+
+    // Execute Request
+    sendBtn.addEventListener('click', async () => {
+      const url = urlInput.value.trim();
+      const method = (methodInput.value || 'GET').trim().toUpperCase();
+
+      if (!url) {
+        alert('Please specify a valid Target URL or paste a cURL command.');
+        return;
+      }
+
+      sendBtn.disabled = true;
+      sendBtn.textContent = '⏳ Sending...';
+      statusBadge.style.display = 'none';
+      responseDisplay.textContent = 'Sending HTTP request...';
+
+      const headers = getParsedHeaders(headersInput.value);
+      const options = {
+        method: method,
+        headers: headers
+      };
+
+      if (!['GET', 'HEAD'].includes(method) && bodyInput.value.trim()) {
+        options.body = bodyInput.value;
+      }
+
+      const startTime = performance.now();
+
+      try {
+        const res = await fetch(url, options);
+        const duration = Math.round(performance.now() - startTime);
+
+        // Header extraction
+        const headerList = [];
+        res.headers.forEach((val, key) => {
+          headerList.push(`${key}: ${val}`);
+        });
+        currentResponseData.headers = headerList.join('\n') || '[No exposed headers returned]';
+
+        // Body extraction
+        const text = await res.text();
+        try {
+          // Format pretty JSON if applicable
+          const json = JSON.parse(text);
+          currentResponseData.body = JSON.stringify(json, null, 2);
+        } catch {
+          currentResponseData.body = text || '[Empty Response Body]';
+        }
+
+        // Status badge
+        statusBadge.style.display = 'inline-block';
+        statusBadge.textContent = `${res.status} ${res.statusText || ''} (${duration}ms)`;
+        if (res.ok) {
+          statusBadge.className = 'status-badge status-success';
+        } else {
+          statusBadge.className = 'status-badge status-error';
+        }
+
+        renderResponse();
+      } catch (err) {
+        const duration = Math.round(performance.now() - startTime);
+        statusBadge.style.display = 'inline-block';
+        statusBadge.textContent = `Error (${duration}ms)`;
+        statusBadge.className = 'status-badge status-error';
+
+        currentResponseData.headers = 'Request failed before receiving response headers.';
+        currentResponseData.body = `[Network/CORS Error]\n${err.message}\n\nTroubleshooting tips:\n1. Check if the URL is accessible.\n2. Ensure the endpoint allows CORS requests (Access-Control-Allow-Origin).\n3. If authenticating via SSO cookies/tokens, check that domain policies allow client-side fetch.`;
+        renderResponse();
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<span>▶ Execute Request</span>';
+      }
+    });
+  </script>
+</body>
+</html>
